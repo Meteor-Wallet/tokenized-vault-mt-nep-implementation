@@ -69,7 +69,10 @@ impl TokenizedMTVault {
         // Effects - CEI Pattern: Update state before external call
         // Burn shares immediately (prevents reuse)
         self.token.internal_withdraw(&owner, shares_to_burn);
-        self.total_assets -= assets_to_transfer;
+        self.total_assets = self
+            .total_assets
+            .checked_sub(assets_to_transfer)
+            .expect("Total assets underflow");
 
         FtBurn {
             owner_id: &owner,
