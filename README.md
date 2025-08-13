@@ -13,6 +13,7 @@ LastUpdated: 2025-08-08
 
 ## Summary
 
+TODO: Rewrite once the FT NEP is proposed
 This NEP proposes a standardized interface for implementing vault contracts on the NEAR Protocol, drawing inspiration from the ERC-4626 standard widely used on Ethereum. A vault contract allows users to deposit a specific token from a NEP-245 Multi Token (MT) contract into the vault, in exchange for which the vault issues shares that represent proportional ownership of the vault's assets.
 
 The underlying asset is a single token ID from a NEP-245 compliant multi-token contract. This allows for vaults that manage semi-fungible tokens, gaming assets, or any other MT-based assets. When deposited, the vault mints new shares to the depositor based on the current exchange rate between the vault's total assets and total shares in circulation. Conversely, when a user redeems shares, the vault burns those shares and returns the equivalent amount of the underlying MT asset to the user.

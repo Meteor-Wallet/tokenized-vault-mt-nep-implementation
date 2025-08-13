@@ -1,0 +1,28 @@
+[package]
+name = "mock_mt"
+description = "Mock multi-token contract for testing"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+borsh = "1.5.7"
+near-contract-standards = "5.15.1"
+near-sdk = "5.14"
+schemars = "0.8"
+serde_json = "1"
+
+[dev-dependencies]
+near-sdk = { version = "5.14", features = ["unit-testing"] }
+
+[profile.release]
+codegen-units = 1
+# Tell `rustc` to optimize for small code size.
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+# Opt into extra safety checks on arithmetic operations https://stackoverflow.com/a/64136471/249801
+overflow-checks = true

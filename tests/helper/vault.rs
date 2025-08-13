@@ -6,6 +6,7 @@ use serde_json::json;
 pub async fn deploy_and_init_vault(
     owner: &Account,
     asset_contract: &Contract,
+    asset_token_id: &str,
     vault_name: &str,
     vault_symbol: &str,
 ) -> Result<Contract, Box<dyn std::error::Error>> {
@@ -41,23 +42,14 @@ pub async fn deploy_and_init_vault(
         .call("new")
         .args_json(json!({
             "asset": asset_contract.id(),
+            "asset_token_id": asset_token_id,
             "metadata": metadata,
         }))
         .transact()
         .await?
         .into_result()?;
 
-    // Register the vault with the underlying asset for storage
-    vault_account
-        .call(asset_contract.id(), "storage_deposit")
-        .args_json(json!({
-            "account_id": contract.id(),
-            "registration_only": false,
-        }))
-        .deposit(NearToken::from_near(1))
-        .transact()
-        .await?
-        .into_result()?;
+    // Note: MT contracts may not require storage registration like FT contracts
 
     Ok(contract)
 }
@@ -80,10 +72,11 @@ pub async fn vault_storage_deposit(
     Ok(())
 }
 
-pub async fn ft_transfer_call_deposit(
-    ft_contract: &Contract,
+pub async fn mt_transfer_call_deposit(
+    mt_contract: &Contract,
     vault_contract: &Contract,
     sender: &Account,
+    token_id: &str,
     amount: u128,
     receiver_id: Option<&Account>,
     min_shares: Option<u128>,
@@ -107,14 +100,15 @@ pub async fn ft_transfer_call_deposit(
     };
 
     let result = sender
-        .call(ft_contract.id(), "ft_transfer_call")
+        .call(mt_contract.id(), "mt_transfer_call")
         .args_json(json!({
             "receiver_id": vault_contract.id(),
+            "token_id": token_id,
             "amount": amount.to_string(),
             "msg": msg,
         }))
-        .deposit(NearToken::from_yoctonear(1))
-        .gas(near_workspaces::types::Gas::from_tgas(100))
+        .deposit(NearToken::from_yoctonear(0))
+        .gas(near_workspaces::types::Gas::from_tgas(300))
         .transact()
         .await?
         .into_result()?;
@@ -137,7 +131,7 @@ pub async fn vault_redeem(
             "memo": memo,
         }))
         .deposit(NearToken::from_yoctonear(1))
-        .gas(near_workspaces::types::Gas::from_tgas(100))
+        .gas(near_workspaces::types::Gas::from_tgas(300))
         .transact()
         .await?
         .into_result()?;
@@ -160,7 +154,7 @@ pub async fn vault_withdraw(
             "memo": memo,
         }))
         .deposit(NearToken::from_yoctonear(1))
-        .gas(near_workspaces::types::Gas::from_tgas(100))
+        .gas(near_workspaces::types::Gas::from_tgas(300))
         .transact()
         .await?
         .into_result()?;
@@ -223,6 +217,17 @@ pub async fn vault_asset(
     account: &Account,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let result: String = account.view(vault_contract.id(), "asset").await?.json()?;
+    Ok(result)
+}
+
+pub async fn vault_asset_token_id(
+    vault_contract: &Contract,
+    account: &Account,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let result: String = account
+        .view(vault_contract.id(), "asset_token_id")
+        .await?
+        .json()?;
     Ok(result)
 }
 
