@@ -37,7 +37,7 @@ pub struct DepositMessage {
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct ERC4626Vault {
+pub struct TokenizedMTVault {
     pub token: FungibleToken,        // Vault shares (NEP-141)
     metadata: FungibleTokenMetadata, // Metadata for shares
     asset: AccountId,                // Underlying asset (NEP-245 Multi Token)
@@ -52,7 +52,7 @@ pub enum StorageKey {
 }
 
 #[near_bindgen]
-impl ERC4626Vault {
+impl TokenizedMTVault {
     #[init]
     pub fn new(asset: AccountId, asset_token_id: String, metadata: FungibleTokenMetadata) -> Self {
         Self {
@@ -114,7 +114,7 @@ impl ERC4626Vault {
 
 // ===== Implement FungibleTokenVaultCore Trait =====
 #[near_bindgen]
-impl VaultCore for ERC4626Vault {
+impl VaultCore for TokenizedMTVault {
     fn asset(&self) -> AccountId {
         self.asset.clone()
     }
@@ -194,7 +194,7 @@ impl VaultCore for ERC4626Vault {
 }
 
 #[near_bindgen]
-impl MultiTokenReceiver for ERC4626Vault {
+impl MultiTokenReceiver for TokenizedMTVault {
     fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
@@ -289,7 +289,7 @@ impl MultiTokenReceiver for ERC4626Vault {
 
 // ===== Implement Fungible Token Traits for Vault Shares =====
 #[near_bindgen]
-impl FungibleTokenCore for ERC4626Vault {
+impl FungibleTokenCore for TokenizedMTVault {
     #[payable]
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>) {
         self.token.ft_transfer(receiver_id, amount, memo)
@@ -316,7 +316,7 @@ impl FungibleTokenCore for ERC4626Vault {
 }
 
 #[near_bindgen]
-impl FungibleTokenResolver for ERC4626Vault {
+impl FungibleTokenResolver for TokenizedMTVault {
     #[private]
     fn ft_resolve_transfer(
         &mut self,
@@ -330,7 +330,7 @@ impl FungibleTokenResolver for ERC4626Vault {
 }
 
 #[near_bindgen]
-impl StorageManagement for ERC4626Vault {
+impl StorageManagement for TokenizedMTVault {
     #[payable]
     fn storage_deposit(
         &mut self,
@@ -368,7 +368,7 @@ impl StorageManagement for ERC4626Vault {
 }
 
 #[near_bindgen]
-impl FungibleTokenMetadataProvider for ERC4626Vault {
+impl FungibleTokenMetadataProvider for TokenizedMTVault {
     fn ft_metadata(&self) -> FungibleTokenMetadata {
         self.metadata.clone()
     }

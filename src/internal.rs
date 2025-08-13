@@ -4,7 +4,7 @@ use near_sdk::{env, ext_contract, json_types::U128, AccountId, Gas, NearToken, P
 use crate::{
     mul_div::{mul_div, Rounding},
     multi_token::ext_mt_core,
-    ERC4626Vault, GAS_FOR_FT_TRANSFER,
+    TokenizedMTVault, GAS_FOR_FT_TRANSFER,
 };
 
 #[ext_contract(ext_self)]
@@ -19,7 +19,7 @@ pub trait _ExtSelf {
     );
 }
 
-impl ERC4626Vault {
+impl TokenizedMTVault {
     pub fn internal_transfer_assets_with_callback(
         &self,
         receiver_id: AccountId,
