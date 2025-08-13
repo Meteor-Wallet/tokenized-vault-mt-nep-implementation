@@ -1,10 +1,9 @@
-use near_contract_standards::fungible_token::{
-    core::ext_ft_core, events::FtBurn, FungibleTokenCore,
-};
+use near_contract_standards::fungible_token::{events::FtBurn, FungibleTokenCore};
 use near_sdk::{env, ext_contract, json_types::U128, AccountId, Gas, NearToken, Promise};
 
 use crate::{
     mul_div::{mul_div, Rounding},
+    multi_token::ext_mt_core,
     ERC4626Vault, GAS_FOR_FT_TRANSFER,
 };
 
@@ -29,13 +28,19 @@ impl ERC4626Vault {
         shares: u128,
         memo: Option<String>,
     ) -> Promise {
-        ext_ft_core::ext(self.asset.clone())
+        ext_mt_core::ext(self.asset.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FOR_FT_TRANSFER)
-            .ft_transfer(receiver_id.clone(), U128(amount), memo.clone())
+            .mt_transfer(
+                receiver_id.clone(),
+                self.asset_token_id.clone(),
+                U128(amount),
+                None,
+                memo.clone(),
+            )
             .then(
                 ext_self::ext(env::current_account_id())
-                    .with_static_gas(Gas::from_tgas(10))
+                    .with_static_gas(Gas::from_tgas(20))
                     .resolve_withdraw(owner, receiver_id, U128(shares), U128(amount), memo),
             )
     }

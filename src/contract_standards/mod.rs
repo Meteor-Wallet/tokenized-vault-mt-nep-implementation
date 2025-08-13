@@ -1,6 +1,8 @@
-use near_contract_standards::fungible_token::{receiver::FungibleTokenReceiver, FungibleTokenCore};
+use near_contract_standards::fungible_token::FungibleTokenCore;
 use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
 use uint::construct_uint;
+
+use crate::multi_token::MultiTokenReceiver;
 
 pub mod events;
 
@@ -9,8 +11,9 @@ construct_uint! {
 }
 
 #[allow(unused)]
-pub trait VaultCore: FungibleTokenCore + FungibleTokenReceiver {
+pub trait VaultCore: FungibleTokenCore + MultiTokenReceiver {
     fn asset(&self) -> AccountId;
+    fn asset_token_id(&self) -> String;
     fn total_assets(&self) -> U128;
     fn redeem(
         &mut self,

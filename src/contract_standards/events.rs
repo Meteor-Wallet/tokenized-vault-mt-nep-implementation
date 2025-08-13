@@ -40,6 +40,7 @@ impl<'a> NearEvent<'a> {
 pub struct VaultDeposit<'a> {
     pub sender_id: &'a AccountIdRef,
     pub owner_id: &'a AccountIdRef,
+    pub token_id: &'a str,
     pub assets: U128,
     pub shares: U128,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -69,6 +70,7 @@ impl VaultDeposit<'_> {
 pub struct VaultWithdraw<'a> {
     pub owner_id: &'a AccountIdRef,
     pub receiver_id: &'a AccountIdRef,
+    pub token_id: &'a str,
     pub shares: U128,
     pub assets: U128,
     #[serde(skip_serializing_if = "Option::is_none")]

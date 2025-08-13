@@ -1,13 +1,13 @@
 mod contract_standards;
 mod internal;
 mod mul_div;
+mod multi_token;
 
 use near_contract_standards::fungible_token::{
     core::FungibleTokenCore,
     core_impl::FungibleToken,
     events::FtMint,
     metadata::{FungibleTokenMetadata, FungibleTokenMetadataProvider},
-    receiver::FungibleTokenReceiver,
     FungibleTokenResolver,
 };
 use near_contract_standards::storage_management::StorageManagement;
@@ -22,8 +22,9 @@ use near_sdk::{json_types::U128, BorshStorageKey};
 use crate::contract_standards::events::{VaultDeposit, VaultWithdraw};
 use crate::contract_standards::VaultCore;
 use crate::mul_div::Rounding;
+use crate::multi_token::MultiTokenReceiver;
 
-const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(30);
+const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(50);
 
 #[derive(Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -39,7 +40,8 @@ pub struct DepositMessage {
 pub struct ERC4626Vault {
     pub token: FungibleToken,        // Vault shares (NEP-141)
     metadata: FungibleTokenMetadata, // Metadata for shares
-    asset: AccountId,                // Underlying asset (NEP-141 or NEP-245)
+    asset: AccountId,                // Underlying asset (NEP-245 Multi Token)
+    asset_token_id: String,          // Token ID of the underlying MT asset
     total_assets: u128,              // Total managed assets
     owner: AccountId,                // Vault owner
 }
@@ -52,11 +54,12 @@ pub enum StorageKey {
 #[near_bindgen]
 impl ERC4626Vault {
     #[init]
-    pub fn new(asset: AccountId, metadata: FungibleTokenMetadata) -> Self {
+    pub fn new(asset: AccountId, asset_token_id: String, metadata: FungibleTokenMetadata) -> Self {
         Self {
             token: FungibleToken::new(StorageKey::FungibleToken),
             metadata,
             asset,
+            asset_token_id,
             total_assets: 0,
             owner: env::predecessor_account_id(),
         }
@@ -80,6 +83,7 @@ impl ERC4626Vault {
                 VaultWithdraw {
                     owner_id: &owner,
                     receiver_id: &receiver,
+                    token_id: &self.asset_token_id,
                     assets,
                     shares,
                     memo: memo.as_deref(),
@@ -113,6 +117,10 @@ impl ERC4626Vault {
 impl VaultCore for ERC4626Vault {
     fn asset(&self) -> AccountId {
         self.asset.clone()
+    }
+
+    fn asset_token_id(&self) -> String {
+        self.asset_token_id.clone()
     }
 
     fn total_assets(&self) -> U128 {
@@ -186,19 +194,30 @@ impl VaultCore for ERC4626Vault {
 }
 
 #[near_bindgen]
-impl FungibleTokenReceiver for ERC4626Vault {
-    fn ft_on_transfer(
+impl MultiTokenReceiver for ERC4626Vault {
+    fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
-        amount: U128,
+        previous_owner_id: AccountId,
+        token_ids: Vec<String>,
+        amounts: Vec<U128>,
         msg: String,
-    ) -> PromiseOrValue<U128> {
+    ) -> PromiseOrValue<Vec<U128>> {
         assert_eq!(
             env::predecessor_account_id(),
             self.asset.clone(),
             "Only the underlying asset can be deposited"
         );
 
+        // Ensure only single token transfer for the expected token_id
+        assert_eq!(token_ids.len(), 1, "Only single token deposits supported");
+        assert_eq!(amounts.len(), 1, "Only single token deposits supported");
+        assert_eq!(
+            token_ids[0], self.asset_token_id,
+            "Only the configured token_id can be deposited"
+        );
+
+        let amount = amounts[0];
         let parsed_msg = match serde_json::from_str::<DepositMessage>(&msg) {
             Ok(deposit_message) => deposit_message,
             Err(_) => DepositMessage {
@@ -215,7 +234,7 @@ impl FungibleTokenReceiver for ERC4626Vault {
         if let Some(min_shares) = parsed_msg.min_shares {
             if max_new_shares < min_shares.0 {
                 // Return all amount as unused (reject the entire deposit)
-                return PromiseOrValue::Value(amount);
+                return PromiseOrValue::Value(vec![amount]);
             }
         }
 
@@ -257,13 +276,14 @@ impl FungibleTokenReceiver for ERC4626Vault {
         VaultDeposit {
             sender_id: &sender_id,
             owner_id: &owner_id,
+            token_id: &self.asset_token_id,
             assets: U128(used_amount),
             shares: U128(shares),
             memo: parsed_msg.memo.as_deref(),
         }
         .emit();
 
-        PromiseOrValue::Value(U128(unused_amount))
+        PromiseOrValue::Value(vec![U128(unused_amount)])
     }
 }
 
